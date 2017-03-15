@@ -1,14 +1,14 @@
-var fs = require('fs')
-  , packageJSON = require('../package.json')
-  , bowerJSON = require('../bower.json');
-  
-var version = packageJSON.version;
-var versionName = 'v' + version;
+var fs = require('fs'),
+  packageJSON = require('../package.json'),
+  bowerJSON = require('../bower.json')
 
-var message = 'Released version ' + versionName;
+var version = packageJSON.version
+var versionName = 'v' + version
 
-console.log('Updating bower.json', message);
+var message = 'Released version ' + versionName
 
-bowerJSON.version = version;
+console.log('Updating bower.json', message)
 
-fs.writeFileSync('bower.json', JSON.stringify(bowerJSON, null, '  '));
+bowerJSON.version = version
+
+fs.writeFileSync('bower.json', JSON.stringify(bowerJSON, null, '  '))

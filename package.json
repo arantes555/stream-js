@@ -67,6 +67,7 @@
     "quickcheck": "^0.0.4",
     "rewire": "~2.5.2",
     "rewire-webpack": "~1.0.1",
+    "standard": "^9.0.1",
     "testdouble": "~1.8.0",
     "webpack": "^1.12.2"
   },

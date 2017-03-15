@@ -1,3 +1,3 @@
-var Promise = require('faye/src/util/promise');
+const Promise = require('faye/src/util/promise')
 
-module.exports = Promise;
+module.exports = Promise

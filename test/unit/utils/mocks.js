@@ -1,13 +1,12 @@
-var config = require('./config')
-  , rewire = require('rewire')
-  , td = require('testdouble')
-  , StreamClient = rewire('../../../src/lib/client');
+const rewire = require('rewire')
+const td = require('testdouble')
+const StreamClient = rewire('../../../src/lib/client')
 
-var request = td.function();
+const request = td.function()
 
-StreamClient.__set__('request', request);
+StreamClient.__set__('request', request)
 
 module.exports = {
-    request: request,
-    StreamClient : StreamClient,
-};
+  request: request,
+  StreamClient: StreamClient
+}

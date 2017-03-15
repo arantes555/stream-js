@@ -1,143 +1,137 @@
-var StreamFeed = require('../../../src/lib/feed'),
-    expect = require('expect.js'),
-    beforeEachFn = require('../utils/hooks').beforeEach,
-    td = require('testdouble'),
-    stream = require('../../../src/getstream'),
-    signing = require('../../../src/lib/signing');
+/* global describe, it, beforeEach */
+const StreamFeed = require('../../../src/lib/feed')
+const expect = require('expect.js')
+const beforeEachFn = require('../utils/hooks').beforeEach
+const td = require('testdouble')
+const stream = require('../../../src/getstream')
 
+describe('[UNIT] Stream Client (Node)', function () {
+  beforeEach(beforeEachFn)
 
-describe('[UNIT] Stream Client (Node)', function() {
+  it('#updateActivities', function () {
+    const self = this
 
-    beforeEach(beforeEachFn);
+    expect(function () {
+      self.client.updateActivities('A-String-Thing')
+    }).to.throwException(function (e) {
+      expect(e).to.be.a(TypeError)
+    })
+  })
 
-    it('#updateActivities', function() {
-        var self = this;
+  it('#userAgent', function () {
+    const useragent = this.client.userAgent()
 
-        expect(function() {
-            self.client.updateActivities('A-String-Thing');
-        }).to.throwException(function(e) {
-            expect(e).to.be.a(TypeError);
-        });
-    });
+    expect(useragent).to.be('stream-javascript-client-node-unknown')
+  })
 
-    it('#userAgent', function() {
-        var useragent = this.client.userAgent();
+  it('#feed', function () {
+    const feed = this.client.feed('user', 'jaap', '123456789')
 
-        expect(useragent).to.be('stream-javascript-client-node-unknown');
-    });
+    expect(feed).to.be.a(StreamFeed)
+  })
 
-    it('#feed', function() {
-        var feed = this.client.feed('user', 'jaap', '123456789');
+  describe('#updateActivities', function () {
+    it('throws', function () {
+      function isGoingToThrow1 () {
+        this.client.updateActivities({})
+      }
 
-        expect(feed).to.be.a(StreamFeed);
-    });
+      function isGoingToThrow2 () {
+        this.client.updateActivities(0)
+      }
 
-    describe('#updateActivities', function() {
+      function isGoingToThrow3 () {
+        this.client.updateActivities(null)
+      }
 
-        it('throws', function() {
-            function isGoingToThrow1() {
-                this.client.updateActivities({});
-            }
+      function isNotGoingToThrow () {
+        this.client.updateActivities([])
+      }
 
-            function isGoingToThrow2() {
-                this.client.updateActivities(0);
-            }
+      function isTypeError (err) {
+        expect(err).to.be.a(TypeError)
+      }
 
-            function isGoingToThrow3() {
-                this.client.updateActivities(null);
-            }
+      expect(isGoingToThrow1).to.throwException(isTypeError)
+      expect(isGoingToThrow2).to.throwException(isTypeError)
+      expect(isGoingToThrow3).to.throwException(isTypeError)
+      expect(isNotGoingToThrow).to.not.throw
+    })
 
-            function isNotGoingToThrow() {
-                this.client.updateActivities([]);
-            }
+    it('(1) works', function () {
+      const post = td.function()
+      td.replace(this.client, 'post', post)
 
-            function isTypeError(err) {
-                expect(err).to.be.a(TypeError);
-            }
+      const activities = [ { actor: 'matthisk', object: 0, verb: 'do' } ]
 
-            expect(isGoingToThrow1).to.throwException(isTypeError);
-            expect(isGoingToThrow2).to.throwException(isTypeError);
-            expect(isGoingToThrow3).to.throwException(isTypeError);
-            expect(isNotGoingToThrow).to.not.throw;
-        });
+      this.client.updateActivities(activities)
 
-        it('(1) works', function() {
-            var post = td.function();
-            td.replace(this.client, 'post', post);
+      td.verify(post(td.matchers.contains({
+        url: 'activities/'
+      }), undefined))
+    })
 
-            var activities = [{ actor: 'matthisk', object: 0, verb: 'do' }];
+    it('(2) works', function () {
+      const post = td.function()
+      td.replace(this.client, 'post', post)
 
-            this.client.updateActivities(activities);
+      const activities = [ { actor: 'matthisk', object: 0, verb: 'do' } ]
+      const fn = function () {}
 
-            td.verify(post(td.matchers.contains({
-                url: 'activities/',
-            }), undefined));
-        });
+      this.client.updateActivities(activities, fn)
 
-        it('(2) works', function() {
-            var post = td.function();
-            td.replace(this.client, 'post', post);
+      td.verify(post(td.matchers.contains({
+        url: 'activities/'
+      }), fn))
+    })
 
-            var activities = [{ actor: 'matthisk', object: 0, verb: 'do' }];
-            var fn = function() {};
+    it('(3) update single activity', function () {
+      const post = td.function()
+      td.replace(this.client, 'post', post)
 
-            this.client.updateActivities(activities, fn);
+      const activities = [ { actor: 'matthisk', object: 0, verb: 'do' } ]
 
-            td.verify(post(td.matchers.contains({
-                url: 'activities/',
-            }), fn));
-        });
+      this.client.updateActivity(activities[0])
 
-        it('(3) update single activity', function() {
-            var post = td.function();
-            td.replace(this.client, 'post', post);
+      td.verify(post(td.matchers.contains({
+        url: 'activities/'
+      }), undefined))
+    })
+  })
 
-            var activities = [{ actor: 'matthisk', object: 0, verb: 'do' }];
+  describe('connect', function () {
+    it('#LOCAL', function () {
+      process.env['LOCAL'] = 1
 
-            this.client.updateActivity(activities[0]);
+      const client = stream.connect('12345', 'abcdefghijklmnop')
+      expect(client.baseUrl).to.be('http://localhost:8000/api/')
 
-            td.verify(post(td.matchers.contains({
-                url: 'activities/',
-            }), undefined));
-        });
+      delete process.env['LOCAL']
+    })
 
-    });
+    it('#LOCAL', function () {
+      const client = stream.connect('12345', 'abcdefghijklmnop', null, {
+        location: 'nl-NL'
+      })
+      expect(client.baseUrl).to.be('https://nl-NL-api.getstream.io/api/')
+    })
 
-    describe('connect', function() {
+    it('#LOCAL_FAYE', function () {
+      process.env['LOCAL_FAYE'] = 1
 
-        it('#LOCAL', function() {
-            process.env['LOCAL'] = 1;
+      const client = stream.connect('12345', 'abcdefghijklmnop')
+      expect(client.fayeUrl).to.be('http://localhost:9999/faye/')
 
-            var client = stream.connect('12345', 'abcdefghijklmnop');
-            expect(client.baseUrl).to.be('http://localhost:8000/api/');
+      delete process.env['LOCAL_FAYE']
+    })
 
-            delete process.env['LOCAL'];
-        });
+    it('#STREAM_BASE_URL', function () {
+      process.env['STREAM_BASE_URL'] = 'http://local.getstream.io/api/'
 
-        it('#LOCAL', function() {
-            var client = stream.connect('12345', 'abcdefghijklmnop', null, {
-                location: 'nl-NL'
-            });
-            expect(client.baseUrl).to.be('https://nl-NL-api.getstream.io/api/');
-        });
+      const client = stream.connect('12345', 'abcdefghijklmnop')
+      expect(client.baseUrl).to.be('http://local.getstream.io/api/')
 
-        it('#LOCAL_FAYE', function() {
-            process.env['LOCAL_FAYE'] = 1;
-
-            var client = stream.connect('12345', 'abcdefghijklmnop');
-            expect(client.fayeUrl).to.be('http://localhost:9999/faye/');
-
-            delete process.env['LOCAL_FAYE'];
-        });
-
-        it('#STREAM_BASE_URL', function() {
-            process.env['STREAM_BASE_URL'] = 'http://local.getstream.io/api/';
-
-            var client = stream.connect('12345', 'abcdefghijklmnop');
-            expect(client.baseUrl).to.be('http://local.getstream.io/api/');
-
-            delete process.env['STREAM_BASE_URL'];
-        });
-
-    });
-});
+      delete process.env['STREAM_BASE_URL']
+    })
+  })
+})

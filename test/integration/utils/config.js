@@ -1,14 +1,14 @@
-var isNodeEnv = typeof window === 'undefined';
+const isNodeEnv = typeof window === 'undefined'
 
-var API_KEY = process.env.STREAM_API_KEY
-  , API_SECRET = process.env.STREAM_API_SECRET
-  , APP_ID = process.env.STREAM_APP_ID;
+const API_KEY = process.env.STREAM_API_KEY
+const API_SECRET = process.env.STREAM_API_SECRET
+const APP_ID = process.env.STREAM_APP_ID
 
-if (! API_KEY || ! API_SECRET || ! APP_ID) {
-    throw new Error('Expected STREAM_API_KEY, STREAM_API_SECRET, and STREAM_APP_ID env vars');
+if (!API_KEY || !API_SECRET || !APP_ID) {
+  throw new Error('Expected STREAM_API_KEY, STREAM_API_SECRET, and STREAM_APP_ID env consts')
 }
 
-module.exports.API_KEY = API_KEY;
-module.exports.API_SECRET = API_SECRET;
-module.exports.APP_ID = APP_ID;
-module.exports.IS_NODE_ENV = isNodeEnv;
+module.exports.API_KEY = API_KEY
+module.exports.API_SECRET = API_SECRET
+module.exports.APP_ID = APP_ID
+module.exports.IS_NODE_ENV = isNodeEnv

@@ -1,15 +1,13 @@
-var request = require('request');
-var StreamFeed = require('./feed');
-var signing = require('./signing');
-var errors = require('./errors');
-var utils = require('./utils');
-var BatchOperations = require('./batch_operations');
-var Promise = require('./promise');
-var qs = require('qs');
-var url = require('url');
-var Faye = require('faye');
-
-
+let request = require('request') // Using let because of rewire in tests
+const StreamFeed = require('./feed')
+const signing = require('./signing')
+const errors = require('./errors')
+const utils = require('./utils')
+const BatchOperations = require('./batch_operations')
+const Promise = require('./promise')
+const qs = require('qs')
+const url = require('url')
+const Faye = require('faye')
 
 /**
  * @callback requestCallback
@@ -18,19 +16,22 @@ var Faye = require('faye');
  * @param {object} body
  */
 
-var StreamClient = function() {
+/**
+ * @constructor
+ */
+const StreamClient = function () {
   /**
    * Client to connect to Stream api
    * @class StreamClient
    */
-  this.initialize.apply(this, arguments);
-};
+  this.initialize.apply(this, arguments)
+}
 
 StreamClient.prototype = {
   baseUrl: 'https://api.getstream.io/api/',
   baseAnalyticsUrl: 'https://analytics.getstream.io/analytics/',
 
-  initialize: function(apiKey, apiSecret, appId, options) {
+  initialize: function (apiKey, apiSecret, appId, options) {
     /**
      * Initialize a client
      * @method intialize
@@ -46,50 +47,50 @@ StreamClient.prototype = {
      * @example <caption>secret is optional and only used in server side mode</caption>
      * stream.connect(apiKey, null, appId);
      */
-    this.apiKey = apiKey;
-    this.apiSecret = apiSecret;
-    this.appId = appId;
-    this.options = options || {};
-    this.version = this.options.version || 'v1.0';
-    this.fayeUrl = this.options.fayeUrl || 'https://faye.getstream.io/faye';
-    this.fayeClient = null;
+    this.apiKey = apiKey
+    this.apiSecret = apiSecret
+    this.appId = appId
+    this.options = options || {}
+    this.version = this.options.version || 'v1.0'
+    this.fayeUrl = this.options.fayeUrl || 'https://faye.getstream.io/faye'
+    this.fayeClient = null
     // track a source name for the api calls, ie get started or databrowser
-    this.group = this.options.group || 'unspecified';
+    this.group = this.options.group || 'unspecified'
     // track subscriptions made on feeds created by this client
-    this.subscriptions = {};
-    this.expireTokens = this.options.expireTokens ? this.options.expireTokens : false;
+    this.subscriptions = {}
+    this.expireTokens = this.options.expireTokens ? this.options.expireTokens : false
     // which data center to use
-    this.location = this.options.location;
-    
-    var protocol = this.options.protocol || 'https';
-    
+    this.location = this.options.location
+
+    const protocol = this.options.protocol || 'https'
+
     if (this.location) {
-        this.baseUrl = protocol + '://' + this.location + '-api.getstream.io/api/';
+      this.baseUrl = protocol + '://' + this.location + '-api.getstream.io/api/'
     }
 
     if (typeof (process) !== 'undefined' && process.env.LOCAL) {
-      this.baseUrl = 'http://localhost:8000/api/';
+      this.baseUrl = 'http://localhost:8000/api/'
     }
 
     if (typeof (process) !== 'undefined' && process.env.LOCAL_FAYE) {
-      this.fayeUrl = 'http://localhost:9999/faye/';
+      this.fayeUrl = 'http://localhost:9999/faye/'
     }
 
     if (typeof (process) !== 'undefined' && process.env.STREAM_BASE_URL) {
-      this.baseUrl = process.env.STREAM_BASE_URL;
+      this.baseUrl = process.env.STREAM_BASE_URL
     }
 
-    this.handlers = {};
-    this.browser = typeof (window) !== 'undefined';
-    this.node = !this.browser;
+    this.handlers = {}
+    this.browser = typeof (window) !== 'undefined'
+    this.node = !this.browser
 
     /* istanbul ignore next */
     if (this.browser && this.apiSecret) {
-      throw new errors.FeedError('You are publicly sharing your private key. Dont use the private key while in the browser.');
+      throw new errors.FeedError('You are publicly sharing your private key. Dont use the private key while in the browser.')
     }
   },
 
-  on: function(event, callback) {
+  on: function (event, callback) {
     /**
      * Support for global event callbacks
      * This is useful for generic error and loading handling
@@ -101,10 +102,10 @@ StreamClient.prototype = {
      * client.on('request', callback);
      * client.on('response', callback);
      */
-    this.handlers[event] = callback;
+    this.handlers[ event ] = callback
   },
 
-  off: function(key) {
+  off: function (key) {
     /**
      * Remove one or more event handlers
      * @method off
@@ -115,28 +116,28 @@ StreamClient.prototype = {
      * client.off(name) removes the specified handler
      */
     if (key === undefined) {
-      this.handlers = {};
+      this.handlers = {}
     } else {
-      delete this.handlers[key];
+      delete this.handlers[ key ]
     }
   },
 
-  send: function() {
+  send: function () {
     /**
      * Call the given handler with the arguments
      * @method send
      * @memberof StreamClient.prototype
      * @access private
      */
-    var args = Array.prototype.slice.call(arguments);
-    var key = args[0];
-    args = args.slice(1);
-    if (this.handlers[key]) {
-      this.handlers[key].apply(this, args);
+    let args = Array.prototype.slice.call(arguments)
+    const key = args[ 0 ]
+    args = args.slice(1)
+    if (this.handlers[ key ]) {
+      this.handlers[ key ].apply(this, args)
     }
   },
 
-  wrapPromiseTask: function(cb, fulfill, reject) {
+  wrapPromiseTask: function (cb, fulfill, reject) {
     /**
      * Wrap a task to be used as a promise
      * @method wrapPromiseTask
@@ -147,65 +148,65 @@ StreamClient.prototype = {
      * @param {function} reject
      * @return {function}
      */
-    var client = this;
+    const client = this
 
-    var callback = this.wrapCallback(cb);
-    return function task(error, response, body) {
+    const callback = this.wrapCallback(cb)
+    return function task (error, response, body) {
       if (error) {
         reject({
           error: error,
-          response: response,
-        });
+          response: response
+        })
       } else if (!/^2/.test('' + response.statusCode)) {
         // error = body;
         reject({
           error: body,
-          response: response,
-        });
+          response: response
+        })
       } else {
-        fulfill(body);
+        fulfill(body)
       }
 
-      callback.call(client, error, response, body);
-    };
+      callback.call(client, error, response, body)
+    }
   },
 
-  wrapCallback: function(cb) {
+  wrapCallback: function (cb) {
     /**
      * Wrap callback for HTTP request
      * @method wrapCallBack
      * @memberof StreamClient.prototype
      * @access private
      */
-    var client = this;
+    const client = this
 
-    function callback() {
+    function callback () {
       // first hit the global callback, subsequently forward
-      var args = Array.prototype.slice.call(arguments);
-      var sendArgs = ['response'].concat(args);
-      client.send.apply(client, sendArgs);
+      const args = Array.prototype.slice.call(arguments)
+      const sendArgs = [ 'response' ].concat(args)
+      client.send.apply(client, sendArgs)
       if (cb !== undefined) {
-        cb.apply(client, args);
+        cb.apply(client, args)
       }
     }
 
-    return callback;
+    return callback
   },
 
-  userAgent: function() {
+  userAgent: function () {
     /**
      * Get the current user agent
      * @method userAgent
      * @memberof StreamClient.prototype
      * @return {string} current user agent
      */
-    var description = (this.node) ? 'node' : 'browser';
+    const description = (this.node) ? 'node' : 'browser'
     // TODO: get the version here in a way which works in both and browserify
-    var version = 'unknown';
-    return 'stream-javascript-client-' + description + '-' + version;
+    const version = 'unknown'
+    return 'stream-javascript-client-' + description + '-' + version
   },
 
-  getReadOnlyToken: function(feedSlug, userId) {
+  getReadOnlyToken: function (feedSlug, userId) {
     /**
      * Returns a token that allows only read operations
      *
@@ -217,10 +218,10 @@ StreamClient.prototype = {
      * @example
      * client.getReadOnlyToken('user', '1');
      */
-    return this.feed(feedSlug, userId).getReadOnlyToken();
+    return this.feed(feedSlug, userId).getReadOnlyToken()
   },
 
-  getReadWriteToken: function(feedSlug, userId) {
+  getReadWriteToken: function (feedSlug, userId) {
     /**
      * Returns a token that allows read and write operations
      *
@@ -232,10 +233,10 @@ StreamClient.prototype = {
      * @example
      * client.getReadWriteToken('user', '1');
      */
-    return this.feed(feedSlug, userId).getReadWriteToken();
+    return this.feed(feedSlug, userId).getReadWriteToken()
   },
 
-  feed: function(feedSlug, userId, token, siteId, options) {
+  feed: function (feedSlug, userId, token, siteId, options) {
     /**
      * Returns a feed object for the given feed id and token
      * @method feed
@@ -251,36 +252,35 @@ StreamClient.prototype = {
      * client.feed('user', '1', 'token2');
      */
 
-    options = options || {};
+    options = options || {}
 
     if (!feedSlug || !userId) {
-      throw new errors.FeedError('Please provide a feed slug and user id, ie client.feed("user", "1")');
+      throw new errors.FeedError('Please provide a feed slug and user id, ie client.feed("user", "1")')
     }
 
     if (feedSlug.indexOf(':') !== -1) {
-      throw new errors.FeedError('Please initialize the feed using client.feed("user", "1") not client.feed("user:1")');
+      throw new errors.FeedError('Please initialize the feed using client.feed("user", "1") not client.feed("user:1")')
     }
 
-    utils.validateFeedSlug(feedSlug);
-    utils.validateUserId(userId);
+    utils.validateFeedSlug(feedSlug)
+    utils.validateUserId(userId)
 
     // raise an error if there is no token
     if (!this.apiSecret && !token) {
-      throw new errors.FeedError('Missing token, in client side mode please provide a feed secret');
+      throw new errors.FeedError('Missing token, in client side mode please provide a feed secret')
     }
 
     // create the token in server side mode
     if (this.apiSecret && !token) {
-      var feedId = '' + feedSlug + userId;
+      const feedId = '' + feedSlug + userId
       // use scoped token if read-only access is necessary
-      token = options.readOnly ? this.getReadOnlyToken(feedSlug, userId) : signing.sign(this.apiSecret, feedId);
+      token = options.readOnly ? this.getReadOnlyToken(feedSlug, userId) : signing.sign(this.apiSecret, feedId)
     }
 
-    var feed = new StreamFeed(this, feedSlug, userId, token, siteId);
-    return feed;
+    return new StreamFeed(this, feedSlug, userId, token, siteId)
   },
 
-  enrichUrl: function(relativeUrl) {
+  enrichUrl: function (relativeUrl) {
     /**
      * Combines the base url with version and the relative url
      * @method enrichUrl
@@ -288,11 +288,10 @@ StreamClient.prototype = {
      * @private
      * @param {string} relativeUrl
      */
-    var url = this.baseUrl + this.version + '/' + relativeUrl;
-    return url;
+    return this.baseUrl + this.version + '/' + relativeUrl
   },
 
-  enrichKwargs: function(kwargs) {
+  enrichKwargs: function (kwargs) {
     /**
      * Adds the API key and the signature
      * @method enrichKwargs
@@ -300,34 +299,34 @@ StreamClient.prototype = {
      * @param {object} kwargs
      * @private
      */
-    kwargs.url = this.enrichUrl(kwargs.url);
+    kwargs.url = this.enrichUrl(kwargs.url)
     if (kwargs.qs === undefined) {
-      kwargs.qs = {};
+      kwargs.qs = {}
     }
 
-    kwargs.qs['api_key'] = this.apiKey;
-    kwargs.qs.location = this.group;
-    kwargs.json = true;
-    var signature = kwargs.signature || this.signature;
-    kwargs.headers = {};
+    kwargs.qs[ 'api_key' ] = this.apiKey
+    kwargs.qs.location = this.group
+    kwargs.json = true
+    let signature = kwargs.signature || this.signature
+    kwargs.headers = {}
 
     // auto-detect authentication type and set HTTP headers accordingly
     if (signing.isJWTSignature(signature)) {
-      kwargs.headers['stream-auth-type'] = 'jwt';
-      signature = signature.split(' ').reverse()[0];
+      kwargs.headers[ 'stream-auth-type' ] = 'jwt'
+      signature = signature.split(' ').reverse()[ 0 ]
     } else {
-      kwargs.headers['stream-auth-type'] = 'simple';
+      kwargs.headers[ 'stream-auth-type' ] = 'simple'
     }
 
-    kwargs.headers.Authorization = signature;
-    kwargs.headers['X-Stream-Client'] = this.userAgent();
+    kwargs.headers.Authorization = signature
+    kwargs.headers[ 'X-Stream-Client' ] = this.userAgent()
     // Make sure withCredentials is not enabled, different browser
     // fallbacks handle it differently by default (meteor)
-    kwargs.withCredentials = false;
-    return kwargs;
+    kwargs.withCredentials = false
+    return kwargs
   },
 
-  signActivity: function(activity) {
+  signActivity: function (activity) {
     /**
      * We automatically sign the to parameter when in server side mode
      * @method signActivities
@@ -335,10 +334,10 @@ StreamClient.prototype = {
      * @private
      * @param  {object}       [activity] Activity to sign
      */
-    return this.signActivities([activity])[0];
+    return this.signActivities([ activity ])[ 0 ]
   },
 
-  signActivities: function(activities) {
+  signActivities: function (activities) {
     /**
      * We automatically sign the to parameter when in server side mode
      * @method signActivities
@@ -347,29 +346,29 @@ StreamClient.prototype = {
      * @param {array} Activities
      */
     if (!this.apiSecret) {
-      return activities;
+      return activities
     }
 
-    for (var i = 0; i < activities.length; i++) {
-      var activity = activities[i];
-      var to = activity.to || [];
-      var signedTo = [];
-      for (var j = 0; j < to.length; j++) {
-        var feedId = to[j];
-        var feedSlug = feedId.split(':')[0];
-        var userId = feedId.split(':')[1];
-        var token = this.feed(feedSlug, userId).token;
-        var signedFeed = feedId + ' ' + token;
-        signedTo.push(signedFeed);
+    for (let i = 0; i < activities.length; i++) {
+      const activity = activities[ i ]
+      const to = activity.to || []
+      const signedTo = []
+      for (let j = 0; j < to.length; j++) {
+        const feedId = to[ j ]
+        const feedSlug = feedId.split(':')[ 0 ]
+        const userId = feedId.split(':')[ 1 ]
+        const token = this.feed(feedSlug, userId).token
+        const signedFeed = feedId + ' ' + token
+        signedTo.push(signedFeed)
       }
 
-      activity.to = signedTo;
+      activity.to = signedTo
     }
 
-    return activities;
+    return activities
   },
 
-  getFayeAuthorization: function() {
+  getFayeAuthorization: function () {
     /**
      * Get the authorization middleware to use Faye with getstream.io
      * @method getFayeAuthorization
@@ -377,32 +376,31 @@ StreamClient.prototype = {
      * @private
      * @return {object} Faye authorization middleware
      */
-    var apiKey = this.apiKey,
-        self = this;
+    const apiKey = this.apiKey,
+      self = this
 
     return {
-      incoming: function(message, callback) {
-        callback(message);
+      incoming: function (message, callback) {
+        callback(message)
       },
 
-      outgoing: function(message, callback) {
-        if (message.subscription && self.subscriptions[message.subscription]) {
-          var subscription = self.subscriptions[message.subscription];
+      outgoing: function (message, callback) {
+        if (message.subscription && self.subscriptions[ message.subscription ]) {
+          const subscription = self.subscriptions[ message.subscription ]
 
           message.ext = {
             'user_id': subscription.userId,
             'api_key': apiKey,
-            'signature': subscription.token,
-          };
-
+            'signature': subscription.token
+          }
         }
 
-        callback(message);
-      },
-    };
+        callback(message)
+      }
+    }
   },
 
-  getFayeClient: function() {
+  getFayeClient: function () {
     /**
      * Returns this client's current Faye client
      * @method getFayeClient
@@ -411,15 +409,15 @@ StreamClient.prototype = {
      * @return {object} Faye client
      */
     if (this.fayeClient === null) {
-      this.fayeClient = new Faye.Client(this.fayeUrl);
-      var authExtension = this.getFayeAuthorization();
-      this.fayeClient.addExtension(authExtension);
+      this.fayeClient = new Faye.Client(this.fayeUrl)
+      const authExtension = this.getFayeAuthorization()
+      this.fayeClient.addExtension(authExtension)
     }
 
-    return this.fayeClient;
+    return this.fayeClient
   },
 
-  get: function(kwargs, cb) {
+  get: function (kwargs, cb) {
     /**
      * Shorthand function for get request
      * @method get
@@ -429,16 +427,17 @@ StreamClient.prototype = {
      * @param  {requestCallback} cb     Callback to call on completion
      * @return {Promise}                Promise object
      */
-    return new Promise(function(fulfill, reject) {
-      this.send('request', 'get', kwargs, cb);
-      kwargs = this.enrichKwargs(kwargs);
-      kwargs.method = 'GET';
-      var callback = this.wrapPromiseTask(cb, fulfill, reject);
-      request(kwargs, callback);
-    }.bind(this));
+    return new Promise(function (fulfill, reject) {
+      this.send('request', 'get', kwargs, cb)
+      kwargs = this.enrichKwargs(kwargs)
+      console.log('Request kwargs', kwargs)
+      kwargs.method = 'GET'
+      const callback = this.wrapPromiseTask(cb, fulfill, reject)
+      request(kwargs, callback)
+    }.bind(this))
   },
 
-  post: function(kwargs, cb) {
+  post: function (kwargs, cb) {
     /**
      * Shorthand function for post request
      * @method post
@@ -448,16 +447,17 @@ StreamClient.prototype = {
      * @param  {requestCallback} cb     Callback to call on completion
      * @return {Promise}                Promise object
      */
-    return new Promise(function(fulfill, reject) {
-      this.send('request', 'post', kwargs, cb);
-      kwargs = this.enrichKwargs(kwargs);
-      kwargs.method = 'POST';
-      var callback = this.wrapPromiseTask(cb, fulfill, reject);
-      request(kwargs, callback);
-    }.bind(this));
+    return new Promise(function (fulfill, reject) {
+      this.send('request', 'post', kwargs, cb)
+      kwargs = this.enrichKwargs(kwargs)
+      console.log('Request kwargs', kwargs)
+      kwargs.method = 'POST'
+      const callback = this.wrapPromiseTask(cb, fulfill, reject)
+      request(kwargs, callback)
+    }.bind(this))
   },
 
-  'delete': function(kwargs, cb) {
+  'delete': function (kwargs, cb) {
     /**
      * Shorthand function for delete request
      * @method delete
@@ -467,53 +467,56 @@ StreamClient.prototype = {
      * @param  {requestCallback} cb     Callback to call on completion
      * @return {Promise}                Promise object
      */
-    return new Promise(function(fulfill, reject) {
-      this.send('request', 'delete', kwargs, cb);
-      kwargs = this.enrichKwargs(kwargs);
-      kwargs.method = 'DELETE';
-      var callback = this.wrapPromiseTask(cb, fulfill, reject);
-      request(kwargs, callback);
-    }.bind(this));
+    return new Promise(function (fulfill, reject) {
+      this.send('request', 'delete', kwargs, cb)
+      kwargs = this.enrichKwargs(kwargs)
+      kwargs.method = 'DELETE'
+      const callback = this.wrapPromiseTask(cb, fulfill, reject)
+      request(kwargs, callback)
+    }.bind(this))
   },
 
-  updateActivities: function(activities, callback) {
+  updateActivities: function (activities, callback) {
     /**
      * Updates all supplied activities on the getstream-io api
      * @since  3.1.0
      * @param  {array} activities list of activities to update
      * @return {Promise}
      */
-    if (! (activities instanceof Array)) {
-      throw new TypeError('The activities argument should be an Array');
+    if (!(activities instanceof Array)) {
+      throw new TypeError('The activities argument should be an Array')
     }
 
-    var authToken = signing.JWTScopeToken(this.apiSecret, 'activities', '*', { feedId: '*', expireTokens: this.expireTokens });
+    const authToken = signing.JWTScopeToken(this.apiSecret, 'activities', '*', {
+      feedId: '*',
+      expireTokens: this.expireTokens
+    })
 
-    var data = {
-      activities: activities,
-    };
+    const data = {
+      activities: activities
+    }
 
     return this.post({
       url: 'activities/',
       body: data,
-      signature: authToken,
-    }, callback);
+      signature: authToken
+    }, callback)
   },
-  
-  updateActivity: function(activity) {
+
+  updateActivity: function (activity) {
     /**
      * Updates one activity on the getstream-io api
      * @since  3.1.0
      * @param  {object} activity The activity to update
-     * @return {Promise}          
+     * @return {Promise}
      */
-     return this.updateActivities([activity]);
-  },
+    return this.updateActivities([ activity ])
+  }
 
-};
+}
 
 if (qs) {
-  StreamClient.prototype.createRedirectUrl = function(targetUrl, userId, events) {
+  StreamClient.prototype.createRedirectUrl = function (targetUrl, userId, events) {
     /**
      * Creates a redirect url for tracking the given events in the context of
      * an email using Stream's analytics platform. Learn more at
@@ -524,36 +527,39 @@ if (qs) {
      * @param  {string} userId    User id to track
      * @param  {array} events     List of events to track
      * @return {string}           The redirect url
-     */    
-    var uri = url.parse(targetUrl);
+     */
+    const uri = url.parse(targetUrl)
 
     if (!(uri.host || (uri.hostname && uri.port)) && !uri.isUnix) {
-      throw new errors.MissingSchemaError('Invalid URI: "' + url.format(uri) + '"');
+      throw new errors.MissingSchemaError('Invalid URI: "' + url.format(uri) + '"')
     }
 
-    var authToken = signing.JWTScopeToken(this.apiSecret, 'redirect_and_track', '*', { userId: userId, expireTokens: this.expireTokens });
-    var analyticsUrl = this.baseAnalyticsUrl + 'redirect/';
-    var kwargs = {
+    const authToken = signing.JWTScopeToken(this.apiSecret, 'redirect_and_track', '*', {
+      userId: userId,
+      expireTokens: this.expireTokens
+    })
+    const analyticsUrl = this.baseAnalyticsUrl + 'redirect/'
+    const kwargs = {
       'auth_type': 'jwt',
       'authorization': authToken,
       'url': targetUrl,
       'api_key': this.apiKey,
-      'events': JSON.stringify(events),
-    };
+      'events': JSON.stringify(events)
+    }
 
-    var qString = utils.rfc3986(qs.stringify(kwargs, null, null, {}));
+    const qString = utils.rfc3986(qs.stringify(kwargs, null, null, {}))
 
-    return analyticsUrl + '?' + qString;
-  };
+    return analyticsUrl + '?' + qString
+  }
 }
 
 // If we are in a node environment and batchOperations is available add the methods to the prototype of StreamClient
 if (BatchOperations) {
-  for (var key in BatchOperations) {
+  for (const key in BatchOperations) {
     if (BatchOperations.hasOwnProperty(key)) {
-      StreamClient.prototype[key] = BatchOperations[key];
+      StreamClient.prototype[ key ] = BatchOperations[ key ]
     }
   }
 }
 
-module.exports = StreamClient;
+module.exports = StreamClient

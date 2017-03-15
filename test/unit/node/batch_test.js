@@ -1,98 +1,94 @@
-var errors = require('../../../src/getstream').errors,
-    expect = require('expect.js'),
-    Promise = require('../../../src/lib/promise'),
-    td = require('testdouble'),
-    mocks = require('../utils/mocks'),
-    beforeEachFn = require('../utils/hooks').beforeEach,
-    signing = signing || require('../../../src/lib/signing');
+/* global describe, it, beforeEach, afterEach */
+const errors = require('../../../src/getstream').errors
+const expect = require('expect.js')
+const Promise = require('../../../src/lib/promise')
+const td = require('testdouble')
+const beforeEachFn = require('../utils/hooks').beforeEach
 
+describe('[UNIT] Stream Client Batch (Node)', function () {
+  beforeEach(beforeEachFn)
 
-describe('[UNIT] Stream Client Batch (Node)', function() {
+  afterEach(function () {
+    td.reset()
+  })
 
-    beforeEach(beforeEachFn);
+  function replaceMSR () {
+    const msr = td.function()
+    td.replace(this.client, 'makeSignedRequest', msr)
+    return msr
+  }
 
-    afterEach(function() {
-        td.reset();
-    });
+  it('#addToMany', function () {
+    expect(this.client.addToMany).to.be.a(Function)
 
-    function replaceMSR() {
-        var msr = td.function();
-        td.replace(this.client, 'makeSignedRequest', msr);
-        return msr;
+    const msr = replaceMSR.call(this)
+
+    const activity = { actor: 'matthisk', object: 0, verb: 'tweet' }
+    const feeds = [ 'global:feed', 'global:feed2' ]
+
+    this.client.addToMany(activity, feeds)
+
+    td.verify(msr({
+      url: 'feed/add_to_many/',
+      body: {
+        activity: activity,
+        feeds: feeds
+      }
+    }, undefined))
+  })
+
+  it('#followMany', function () {
+    expect(this.client.followMany).to.be.a(Function)
+
+    const msr = replaceMSR.call(this)
+
+    const follows = []
+    const cb = function () {}
+
+    this.client.followMany(follows, 10, cb)
+
+    td.verify(msr({
+      url: 'follow_many/',
+      body: follows,
+      qs: {
+        'activity_copy_limit': 10
+      }
+    }, cb))
+  })
+
+  it('#followMany', function () {
+    expect(this.client.followMany).to.be.a(Function)
+
+    const msr = replaceMSR.call(this)
+
+    const follows = []
+    const cb = function () {}
+
+    this.client.followMany(follows, cb)
+
+    td.verify(msr({
+      url: 'follow_many/',
+      body: follows,
+      qs: {}
+    }, cb))
+  })
+
+  it('#makeSignedRequest', function () {
+    const self = this
+    td.replace(this.client, 'apiSecret', '')
+
+    function throws () {
+      self.client.makeSignedRequest({})
     }
 
-    it('#addToMany', function() {
-        expect(this.client.addToMany).to.be.a(Function);
+    expect(throws).to.throwException(function (err) {
+      expect(err).to.be.a(errors.SiteError)
+    })
+  })
 
-        var msr = replaceMSR.call(this);
+  it('#makeSignedRequest', function () {
+    const p = this.client.makeSignedRequest({})
 
-        var activity = { actor: 'matthisk', object: 0, verb: 'tweet' };
-        var feeds = ['global:feed', 'global:feed2'];
-
-        this.client.addToMany(activity, feeds);
-
-        td.verify(msr({
-            url: 'feed/add_to_many/',
-            body: {
-                activity: activity,
-                feeds: feeds
-            }
-        }, undefined));
-    });
-
-    it('#followMany', function() {
-        expect(this.client.followMany).to.be.a(Function);
-
-        var msr = replaceMSR.call(this);
-
-        var follows = [];
-        var cb = function() {};
-
-        this.client.followMany(follows, 10, cb);
-
-        td.verify(msr({
-            url: 'follow_many/',
-            body: follows,
-            qs: {
-                'activity_copy_limit': 10
-            }
-        }, cb));
-    });
-
-    it('#followMany', function() {
-        expect(this.client.followMany).to.be.a(Function);
-
-        var msr = replaceMSR.call(this);
-
-        var follows = [];
-        var cb = function() {};
-
-        this.client.followMany(follows, cb);
-
-        td.verify(msr({
-            url: 'follow_many/',
-            body: follows,
-            qs: { }
-        }, cb));
-    });
-
-    it('#makeSignedRequest', function() {
-        var self = this;
-        td.replace(this.client, 'apiSecret', '');
-
-        function throws() {
-            self.client.makeSignedRequest({});
-        }
-
-        expect(throws).to.throwException(function(err) {
-            expect(err).to.be.a(errors.SiteError);
-        });
-    });
-
-    it('#makeSignedRequest', function() {
-        var p = this.client.makeSignedRequest({});
-
-        expect(p).to.be.a(Promise);
-    });
-    
-});
+    expect(p).to.be.a(Promise)
+  })
+})
